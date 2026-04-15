@@ -170,6 +170,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.delegate.selected[i] = !m.delegate.selected[i]
 					return m, nil
 				}
+				m.list, cmd = m.list.Update(msg)
+			case "enter":
+				if m.list.FilterState() == list.Filtering {
+					m.list, cmd = m.list.Update(msg)
+					return m, cmd
+				}
+				// TODO: confirm selection
+
 			default:
 				m.list, cmd = m.list.Update(msg)
 			}
@@ -191,6 +199,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		m.state = stateInput
 		return m, nil
+
+	default:
+		if m.state == stateList {
+			m.list, cmd = m.list.Update(msg)
+		}
 	}
 
 	return m, cmd
