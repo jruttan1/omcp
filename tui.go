@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"io"
+	"strings"
+
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
-	"fmt"
-	"io"
-	"strings"
 )
 
 // This file is kinda hard to read because of the nested switches for state, view, input and different structs and functions interacting
@@ -91,18 +92,19 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 }
 
 type model struct {
-	state        state
-	input        textinput.Model
-	urlInput     textinput.Model
-	focusedField int // 0 = file path, 1 = base URL
-	baseURL      string
-	serverInfo   Info
-	list         list.Model
-	delegate     delegate
-	spinner      spinner.Model
-	err          error
-	width        int
-	height       int
+	state         state
+	input         textinput.Model
+	urlInput      textinput.Model
+	focusedField  int // 0 = file path, 1 = base URL
+	baseURL       string
+	serverInfo    Info
+	list          list.Model
+	delegate      delegate
+	spinner       spinner.Model
+	err           error
+	selectedTools []Tool
+	width         int
+	height        int
 }
 
 func loadTools(fileName string) tea.Cmd {
@@ -171,12 +173,23 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				m.list, cmd = m.list.Update(msg)
-			case "enter":
+			case "enter": // confirm selection
 				if m.list.FilterState() == list.Filtering {
 					m.list, cmd = m.list.Update(msg)
 					return m, cmd
 				}
-				// TODO: confirm selection
+				selected := false
+				for i, v := range m.delegate.selected { // m.delegate.selected is a map[int]bool so check if there is at least 1 bool == true
+					if v {
+						selected = true
+						m.selectedTools = append(m.selectedTools, m.list.Items()[i].(Tool)) // complex because it unpacks list, gets item at index i and asserts to Tool type
+					}
+				}
+				if !selected {
+					m.err = fmt.Errorf("select at least one endpoint to continue")
+				} else {
+					return m, tea.Quit // successfully entered selections, quit tui, server start handled in main
+				}
 
 			default:
 				m.list, cmd = m.list.Update(msg)
@@ -221,8 +234,12 @@ func (m *model) View() tea.View {
 		meta := lipgloss.NewStyle().Foreground(lipgloss.Color("#6c7086")).Render("v" + m.serverInfo.Version)
 		desc := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6adc8")).Render(m.serverInfo.Description)
 		hint := lipgloss.NewStyle().Foreground(lipgloss.Color("#6c7086")).Render("space to toggle · enter to confirm")
+		errStr := ""
+		if m.err != nil {
+			errStr = "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8")).Render("✗ "+m.err.Error())
+		}
 		content = lipgloss.NewStyle().Padding(2, 4).Render(
-			lipgloss.JoinVertical(lipgloss.Left, title+" "+meta, desc, "", m.list.View(), hint),
+			lipgloss.JoinVertical(lipgloss.Left, title+" "+meta, desc, "", m.list.View(), hint, errStr),
 		)
 	}
 	v := tea.NewView(content)

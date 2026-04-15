@@ -45,4 +45,7 @@ func main() {
 		fmt.Printf("Error launching CLI: %v", err)
 		os.Exit(1)
 	}
+
+	fmt.Print("Starting MCP Server...")
+	server := createMCP()
 }

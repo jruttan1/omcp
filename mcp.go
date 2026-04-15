@@ -4,7 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/server"
+	mcp "github.com/mark3labs/mcp-go/mcp"
+	server "github.com/mark3labs/mcp-go/server"
 )
 
 func createMcp(filename string, serverInfo Info) *server.MCPServer {
@@ -24,4 +25,12 @@ func createMcp(filename string, serverInfo Info) *server.MCPServer {
 
 	return s
 
+}
+
+// add selected tools to the server instance
+func createTools(selectedTools []Tool, server *server.MCPServer) {
+	for _, tool := range selectedTools {
+		summary := tool.Summary
+
+	}
 }
