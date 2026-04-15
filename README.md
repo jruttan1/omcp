@@ -1,6 +1,6 @@
 # omcp
 
-API spec -> MCP server in 1 command
+API spec &rarr; MCP server in 1 command
 
 ## Install
 
