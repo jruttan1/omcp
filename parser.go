@@ -25,6 +25,10 @@ type Tool struct {
 	Summary string
 }
 
+func (t Tool) Title() string       { return t.Method + " " + t.Route }
+func (t Tool) Description() string { return t.Summary }
+func (t Tool) FilterValue() string { return t.Method + " " + t.Route }
+
 func parse(fileName string) ([]Tool, error) {
 
 	contents, err := os.ReadFile(fileName) // contents = byte slice of input file text

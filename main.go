@@ -1,33 +1,43 @@
 package main
 
 import (
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"flag"
 	"fmt"
 	"os"
 )
 
 func main() {
+	ti := textinput.New()
+	ti.Placeholder = "path/to/openapi.yaml"
+	ti.Prompt = ""
+	ti.SetWidth(46)
+	ti.CharLimit = 200
 
-	flag.Parse()
+	ui := textinput.New()
+	ui.Placeholder = "https://api.example.com"
+	ui.Prompt = ""
+	ui.SetWidth(46)
+	ui.CharLimit = 200
 
-	args := flag.Args()
-	if len(args) < 1 {
-		fmt.Println("Error: please provide a file path")
-		os.Exit(1)
-	}
+	s := spinner.New()
+	s.Spinner = spinner.Dot
 
-	fileName := args[0]
-
-	tools, err := parse(fileName)
-	if err != nil {
-		fmt.Println("Error occured while reading from file:", fileName)
-		os.Exit(1)
-	}
+	d := delegate{selected: make(map[int]bool)}
+	theme := NewTheme()
+	l := list.New(nil, d, 0, 0)
+	l.Title = "select endpoints to convert to mcp"
+	l.Styles.Title = theme.ListTitle
 
 	m := &model{
-		tools:  tools,
-		styles: NewTheme(),
+		state:    stateInput,
+		input:    ti,
+		urlInput: ui,
+		spinner:  s,
+		list:     l,
+		delegate: d,
 	}
 
 	p := tea.NewProgram(m)
@@ -35,5 +45,4 @@ func main() {
 		fmt.Printf("Error launching CLI: %v", err)
 		os.Exit(1)
 	}
-
 }
