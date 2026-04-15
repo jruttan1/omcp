@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// This file is kinda hard to read because of the nested switches for state, view, input and different structs and functions interacting
+// Im gonna come back and refactor this into functions for each view state eventually
+
 type state int
 
 const (
@@ -134,30 +137,47 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.list.SetSize(msg.Width-8, msg.Height-6)
 		return m, nil
+
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
-		if m.state == stateInput {
-			switch msg.String() {
-			case "tab", "shift+tab":
+		switch m.state { // switch based on state of ui
+		case stateInput: // initial input screen
+			switch msg.String() { // switch based on user command for input screen
+			case "tab", "shift+tab": // tab to switch fields
 				next := (m.focusedField + 1) % 2
 				return m, m.focusField(next)
-			case "enter":
+			case "enter": // enter switches or continues to next screen if both boxes are full
 				if m.focusedField == 0 {
 					return m, m.focusField(1)
 				}
 				m.baseURL = m.urlInput.Value()
 				m.state = stateLoading
 				return m, tea.Batch(m.spinner.Tick, loadTools(m.input.Value()))
+			default:
+				if m.focusedField == 0 {
+					m.input, cmd = m.input.Update(msg)
+				} else {
+					m.urlInput, cmd = m.urlInput.Update(msg)
+				}
 			}
+		case stateList: // second screen for viewing enpoints and server data
+			switch msg.String() {
+			case "space": // space to select an endpoint
+				if m.list.FilterState() != list.Filtering {
+					i := m.list.Index()
+					m.delegate.selected[i] = !m.delegate.selected[i]
+					return m, nil
+				}
+			default:
+				m.list, cmd = m.list.Update(msg)
+			}
+		case stateLoading: // between screens render spinner
+			m.spinner, cmd = m.spinner.Update(msg)
 		}
-		if m.state == stateList && msg.String() == "space" && m.list.FilterState() != list.Filtering {
-			i := m.list.Index()
-			m.delegate.selected[i] = !m.delegate.selected[i]
-			return m, nil
-		}
-	case toolsLoadedMsg:
+
+	case toolsLoadedMsg: // async success state from parser to ui
 		m.serverInfo = msg.info
 		items := make([]list.Item, len(msg.tools))
 		for i, t := range msg.tools {
@@ -166,23 +186,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetItems(items)
 		m.state = stateList
 		return m, nil
-	case toolsErrMsg:
+
+	case toolsErrMsg: // async fail state from parser to ui
 		m.err = msg
 		m.state = stateInput
 		return m, nil
-	}
-
-	switch m.state {
-	case stateInput:
-		if m.focusedField == 0 {
-			m.input, cmd = m.input.Update(msg)
-		} else {
-			m.urlInput, cmd = m.urlInput.Update(msg)
-		}
-	case stateLoading:
-		m.spinner, cmd = m.spinner.Update(msg)
-	case stateList:
-		m.list, cmd = m.list.Update(msg)
 	}
 
 	return m, cmd
@@ -190,7 +198,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) View() tea.View {
 	var content string
-	switch m.state {
+	switch m.state { // view states corresponding to update switch
 	case stateInput:
 		content = m.homepageView()
 	case stateLoading:
