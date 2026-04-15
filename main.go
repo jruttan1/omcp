@@ -40,12 +40,23 @@ func main() {
 		delegate: d,
 	}
 
+	// run tui
 	p := tea.NewProgram(m)
-	if _, err := p.Run(); err != nil {
+	result, err := p.Run() // p.Run() returns the state of the tui run
+	if err != nil {
 		fmt.Printf("Error launching CLI: %v", err)
 		os.Exit(1)
 	}
+	m = result.(*model) // cast the tea.Model that Run() returns to custom model pointer
 
+	// start mcp
 	fmt.Print("Starting MCP Server...")
-	server := createMCP()
+	mcpServer := createMcp(m.input.Value(), m.serverInfo)
+	createTools(m.selectedTools, mcpServer, m.urlInput.Value())
+
+	if err := startServer(mcpServer); err != nil {
+		fmt.Printf("Error occured while starting server: %v\n", err)
+		os.Exit(1)
+	}
+
 }

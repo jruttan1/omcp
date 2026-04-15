@@ -294,7 +294,7 @@ func (m *model) homepageView() string {
 		dim.Render("api spec file"),
 		box(m.input, m.focusedField == 0)+errStr,
 		"",
-		dim.Render("server base url"),
+		dim.Render("server base url or local host url"),
 		box(m.urlInput, m.focusedField == 1),
 		"",
 		dim.Render("tab to switch · enter to confirm · ctrl+c to quit"),

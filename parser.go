@@ -21,7 +21,7 @@ type Info struct {
 	Description string `yaml:"description"`
 }
 
-// list of all the endpoints
+// all the fields of a tool
 type Tool struct {
 	Name       string
 	Method     string
