@@ -7,17 +7,21 @@ import (
 	"strings"
 )
 
-type Info struct {
-	Title   string `yaml:"title"`
-	Version string `yaml:"version"`
-}
-
+// represents the spec as a whole
 type Spec struct {
 	Info  Info                      `yaml:"info"`
 	Paths map[string]map[string]any `yaml:"paths"`
 	// map of string: any -> '/route': 'get'
 }
 
+// metadata info for each spec
+type Info struct {
+	Title       string `yaml:"title"`
+	Version     string `yaml:"version"`
+	Description string `yaml:"description"`
+}
+
+// list of all the endpoints
 type Tool struct {
 	Name    string
 	Method  string
@@ -29,12 +33,12 @@ func (t Tool) Title() string       { return t.Method + " " + t.Route }
 func (t Tool) Description() string { return t.Summary }
 func (t Tool) FilterValue() string { return t.Method + " " + t.Route }
 
-func parse(fileName string) ([]Tool, error) {
+func parse(fileName string) ([]Tool, Info, error) {
 
 	contents, err := os.ReadFile(fileName) // contents = byte slice of input file text
 
 	if err != nil {
-		return nil, err
+		return nil, Info{}, err
 	}
 
 	var apiSpec Spec // init an instance of the Spec object
@@ -42,7 +46,7 @@ func parse(fileName string) ([]Tool, error) {
 	err = yaml.Unmarshal(contents, &apiSpec) // takes (input, output) and returns error or nil and turns yaml into a struct
 
 	if err != nil {
-		return nil, err
+		return nil, Info{}, err
 	}
 
 	paths := apiSpec.Paths
@@ -78,6 +82,6 @@ func parse(fileName string) ([]Tool, error) {
 		}
 	}
 
-	return tools, nil
+	return tools, apiSpec.Info, nil
 
 }

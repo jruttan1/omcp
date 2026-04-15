@@ -19,7 +19,10 @@ const (
 	stateList
 )
 
-type toolsLoadedMsg []Tool
+type toolsLoadedMsg struct {
+	tools []Tool
+	info  Info
+}
 type toolsErrMsg error
 
 // delegate renders each list row and tracks which items are selected.
@@ -90,6 +93,7 @@ type model struct {
 	urlInput     textinput.Model
 	focusedField int // 0 = file path, 1 = base URL
 	baseURL      string
+	serverInfo   Info
 	list         list.Model
 	delegate     delegate
 	spinner      spinner.Model
@@ -100,11 +104,11 @@ type model struct {
 
 func loadTools(fileName string) tea.Cmd {
 	return func() tea.Msg {
-		tools, err := parse(fileName)
+		tools, info, err := parse(fileName)
 		if err != nil {
 			return toolsErrMsg(err)
 		}
-		return toolsLoadedMsg(tools)
+		return toolsLoadedMsg{tools: tools, info: info}
 	}
 }
 
@@ -154,8 +158,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case toolsLoadedMsg:
-		items := make([]list.Item, len(msg))
-		for i, t := range msg {
+		m.serverInfo = msg.info
+		items := make([]list.Item, len(msg.tools))
+		for i, t := range msg.tools {
 			items[i] = t
 		}
 		m.list.SetItems(items)
@@ -191,9 +196,12 @@ func (m *model) View() tea.View {
 	case stateLoading:
 		content = lipgloss.NewStyle().Padding(2, 4).Foreground(lipgloss.Color("#89b4fa")).Render(m.spinner.View() + " loading...")
 	default:
+		title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cba6f7")).Render(m.serverInfo.Title)
+		meta := lipgloss.NewStyle().Foreground(lipgloss.Color("#6c7086")).Render("v" + m.serverInfo.Version)
+		desc := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6adc8")).Render(m.serverInfo.Description)
 		hint := lipgloss.NewStyle().Foreground(lipgloss.Color("#6c7086")).Render("space to toggle · enter to confirm")
 		content = lipgloss.NewStyle().Padding(2, 4).Render(
-			lipgloss.JoinVertical(lipgloss.Left, m.list.View(), hint),
+			lipgloss.JoinVertical(lipgloss.Left, title+" "+meta, desc, "", m.list.View(), hint),
 		)
 	}
 	v := tea.NewView(content)

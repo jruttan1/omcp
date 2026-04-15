@@ -17,7 +17,7 @@ func main() {
 	ti.CharLimit = 200
 
 	ui := textinput.New()
-	ui.Placeholder = "https://api.example.com"
+	ui.Placeholder = "https://..."
 	ui.Prompt = ""
 	ui.SetWidth(46)
 	ui.CharLimit = 200
