@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 
 	"charm.land/bubbles/v2/list"
@@ -43,9 +44,9 @@ func (d delegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 const checkPrefixLen = 3
 
 var logoColors = []string{
-	"#cba6f7", "#c0b2f9", "#b4befe",
-	"#9ec0fc", "#89b4fa", "#7dbef3",
-	"#74c7ec", "#7fd8e8", "#89dceb",
+	"#f5c2e7", "#cba6f7", "#b4befe",
+	"#89b4fa", "#74c7ec", "#89dceb",
+	"#74c7ec", "#89b4fa", "#b4befe",
 }
 
 func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -62,7 +63,7 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	// ○  method /route
 	// matched indices are into FilterValue, so offset by checkPrefixLen
 	title := fmt.Sprintf("%s  %s %s", check, tool.Method, tool.Route)
-	desc := fmt.Sprintf("   %s", tool.Summary)
+	desc := fmt.Sprintf("%s", tool.Summary)
 
 	isSelected := index == m.Index()
 	isFiltered := m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied
@@ -95,13 +96,15 @@ type model struct {
 	state         state
 	input         textinput.Model
 	urlInput      textinput.Model
-	focusedField  int // 0 = file path, 1 = base URL
+	keyInput      textinput.Model
+	focusedField  int // 0 = file path, 1 = base URL, 2 = key
 	baseURL       string
 	serverInfo    Info
 	list          list.Model
 	delegate      delegate
 	spinner       spinner.Model
 	err           error
+	urlErr        error
 	selectedTools []Tool
 	width         int
 	height        int
@@ -123,12 +126,21 @@ func (m *model) Init() tea.Cmd {
 
 func (m *model) focusField(i int) tea.Cmd {
 	m.focusedField = i
-	if i == 0 {
+	switch i {
+	case 0:
+		m.keyInput.Blur()
 		m.urlInput.Blur()
 		return m.input.Focus()
+	case 1:
+		m.keyInput.Blur()
+		m.input.Blur()
+		return m.urlInput.Focus()
+	case 2:
+		m.input.Blur()
+		m.urlInput.Blur()
+		return m.keyInput.Focus()
 	}
-	m.input.Blur()
-	return m.urlInput.Focus()
+	return nil
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -148,20 +160,32 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case stateInput: // initial input screen
 			switch msg.String() { // switch based on user command for input screen
 			case "tab", "shift+tab": // tab to switch fields
-				next := (m.focusedField + 1) % 2
+				next := (m.focusedField + 1) % 3
 				return m, m.focusField(next)
 			case "enter": // enter switches or continues to next screen if both boxes are full
-				if m.focusedField == 0 {
-					return m, m.focusField(1)
+				if m.focusedField == 1 {
+					u := m.urlInput.Value()
+					parsed, parseErr := url.Parse(u)
+					if parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+						m.urlErr = fmt.Errorf("invalid url: must start with http:// or https://")
+						return m, nil
+					}
+					m.urlErr = nil
+				}
+				if m.focusedField < 2 {
+					return m, m.focusField(m.focusedField + 1)
 				}
 				m.baseURL = m.urlInput.Value()
 				m.state = stateLoading
 				return m, tea.Batch(m.spinner.Tick, loadTools(m.input.Value()))
 			default:
-				if m.focusedField == 0 {
+				switch m.focusedField {
+				case 0:
 					m.input, cmd = m.input.Update(msg)
-				} else {
+				case 1:
 					m.urlInput, cmd = m.urlInput.Update(msg)
+				case 2:
+					m.keyInput, cmd = m.keyInput.Update(msg)
 				}
 			}
 		case stateList: // second screen for viewing enpoints and server data
@@ -248,18 +272,24 @@ func (m *model) View() tea.View {
 }
 
 const logo = `
-_______/\\\\\_______/\\\\____________/\\\\________/\\\\\\\\\__/\\\\\\\\\\\\\___
- _____/\\\///\\\____\/\\\\\\________/\\\\\\_____/\\\////////__\/\\\/////////\\\_
-  ___/\\\/__\///\\\__\/\\\//\\\____/\\\//\\\___/\\\/___________\/\\\_______\/\\\_
-   __/\\\______\//\\\_\/\\\\///\\\/\\\/_\/\\\__/\\\_____________\/\\\\\\\\\\\\\/__
-    _\/\\\_______\/\\\_\/\\\__\///\\\/___\/\\\_\/\\\_____________\/\\\/////////____
-     _\//\\\______/\\\__\/\\\____\///_____\/\\\_\//\\\____________\/\\\_____________
-      __\///\\\__/\\\____\/\\\_____________\/\\\__\///\\\__________\/\\\_____________
-       ____\///\\\\\/_____\/\\\_____________\/\\\____\////\\\\\\\\\_\/\\\_____________
-        ______\/////_______\///______________\///________\/////////__\///______________`
+ ██████╗ ███╗   ███╗ ██████╗██████╗ 
+██╔═══██╗████╗ ████║██╔════╝██╔══██╗
+██║   ██║██╔████╔██║██║     ██████╔╝
+██║   ██║██║╚██╔╝██║██║     ██╔═══╝ 
+╚██████╔╝██║ ╚═╝ ██║╚██████╗██║     
+ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝╚═╝ `
 
 func (m *model) homepageView() string {
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#bac2de"))
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#6c7086"))
+	normal := lipgloss.NewStyle().Foreground(lipgloss.Color("#bac2de"))
+	accent := lipgloss.NewStyle().Foreground(lipgloss.Color("#89b4fa"))
+
+	label := func(text string, fieldIndex int) string {
+		if m.focusedField == fieldIndex {
+			return accent.Render(text)
+		}
+		return dim.Render(text)
+	}
 
 	logoLines := strings.Split(logo, "\n")
 	for i, line := range logoLines {
@@ -267,9 +297,14 @@ func (m *model) homepageView() string {
 	}
 	title := strings.Join(logoLines, "\n")
 
+	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8"))
 	errStr := ""
 	if m.err != nil {
-		errStr = "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8")).Render("✗ "+m.err.Error())
+		errStr = "\n" + errStyle.Render("✗ "+m.err.Error())
+	}
+	urlErrStr := ""
+	if m.urlErr != nil {
+		urlErrStr = "\n" + errStyle.Render("✗ "+m.urlErr.Error())
 	}
 
 	box := func(input textinput.Model, focused bool) string {
@@ -284,19 +319,23 @@ func (m *model) homepageView() string {
 			Render(input.View())
 	}
 
+	arrow := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#cba6f7")). // catppuccin mauve
+		Render("→")
+
 	return lipgloss.NewStyle().Padding(2, 4).Render(lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		"",
+		normal.Render("openapi spec ")+arrow+normal.Render(" mcp server in 1 command :)"),
 		"",
-		"",
-		dim.Render("turn an openapi spec into an mcp server in 1 command :)"),
-		"",
-		dim.Render("api spec file"),
+		label("api spec file", 0),
 		box(m.input, m.focusedField == 0)+errStr,
 		"",
-		dim.Render("server base url or local host url"),
-		box(m.urlInput, m.focusedField == 1),
+		label("base url of a server", 1),
+		box(m.urlInput, m.focusedField == 1)+urlErrStr,
 		"",
+		label("api key (if auth is needed)", 2),
+		box(m.keyInput, m.focusedField == 2),
 		dim.Render("tab to switch · enter to confirm · ctrl+c to quit"),
 	))
 }

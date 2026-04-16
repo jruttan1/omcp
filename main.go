@@ -12,15 +12,21 @@ import (
 func main() {
 	ti := textinput.New()
 	ti.Placeholder = "path/to/openapi.yaml"
-	ti.Prompt = ""
+	ti.Prompt = "> "
 	ti.SetWidth(46)
 	ti.CharLimit = 200
 
 	ui := textinput.New()
 	ui.Placeholder = "https://..."
-	ui.Prompt = ""
+	ui.Prompt = "> "
 	ui.SetWidth(46)
 	ui.CharLimit = 200
+
+	ki := textinput.New()
+	ki.Placeholder = "bearer token or api key"
+	ki.Prompt = "> "
+	ki.SetWidth(46)
+	ki.CharLimit = 200
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -35,6 +41,7 @@ func main() {
 		state:    stateInput,
 		input:    ti,
 		urlInput: ui,
+		keyInput: ki,
 		spinner:  s,
 		list:     l,
 		delegate: d,
@@ -50,12 +57,12 @@ func main() {
 	m = result.(*model) // cast the tea.Model that Run() returns to custom model pointer
 
 	// start mcp
-	fmt.Print("Starting MCP Server...")
 	mcpServer := createMcp(m.input.Value(), m.serverInfo)
-	createTools(m.selectedTools, mcpServer, m.urlInput.Value())
+	createTools(m.selectedTools, mcpServer, m.urlInput.Value(), m.keyInput.Value())
+	fmt.Fprintf(os.Stderr, "omcp: %s — %d tools registered on %s\n", m.serverInfo.Title, len(m.selectedTools), m.urlInput.Value())
 
 	if err := startServer(mcpServer); err != nil {
-		fmt.Printf("Error occured while starting server: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error starting server: %v\n", err)
 		os.Exit(1)
 	}
 

@@ -49,7 +49,7 @@ func buildBody(tool Tool, args map[string]any) ([]byte, error) {
 	return json.Marshal(body)
 }
 
-func makeHandler(tool Tool, baseURL string) server.ToolHandlerFunc {
+func makeHandler(tool Tool, baseURL string, apiKey string) server.ToolHandlerFunc {
 	// returns a custom mcp handler for each tool
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
@@ -67,6 +67,10 @@ func makeHandler(tool Tool, baseURL string) server.ToolHandlerFunc {
 		httpReq, err := http.NewRequestWithContext(ctx, method, requestURL, jsonBody)
 		if err != nil {
 			return nil, err
+		}
+
+		if apiKey != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 		}
 
 		// send the request

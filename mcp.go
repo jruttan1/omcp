@@ -28,7 +28,7 @@ func createMcp(filename string, serverInfo Info) *server.MCPServer {
 }
 
 // add selected tools to the server instance
-func createTools(selectedTools []Tool, server *server.MCPServer, baseURL string) {
+func createTools(selectedTools []Tool, server *server.MCPServer, baseURL string, apiKey string) {
 	for _, tool := range selectedTools {
 		opts := []mcp.ToolOption{
 			mcp.WithDescription(tool.Summary),
@@ -57,7 +57,8 @@ func createTools(selectedTools []Tool, server *server.MCPServer, baseURL string)
 				}
 			}
 		}
-		server.AddTool(mcp.NewTool(tool.Name, opts...), makeHandler(tool, baseURL)) // once parameters are accumulated, pass to add tool
+		server.AddTool(mcp.NewTool(tool.Name, opts...), makeHandler(tool, baseURL, apiKey))
+		// once parameters are accumulated, pass to add tool
 	}
 }
 
