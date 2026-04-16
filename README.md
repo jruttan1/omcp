@@ -7,7 +7,6 @@ Point omcp at an OpenAPI spec and get a fully working MCP server. One binary, no
 ```
 brew tap jruttan1/omcp
 brew install omcp
-omcp init
 ```
 
 ## Usage
