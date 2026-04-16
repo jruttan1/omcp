@@ -54,17 +54,20 @@ func makeHandler(tool Tool, baseURL string, apiKey string) server.ToolHandlerFun
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 		requestURL := buildURL(tool, args, baseURL)
-		method := tool.Method
+		method := strings.ToUpper(tool.Method)
 
 		bodyBytes, err := buildBody(tool, args)
 		if err != nil {
 			return nil, err
 		}
 
-		jsonBody := bytes.NewReader(bodyBytes)
+		var bodyReader io.Reader
+		if bodyBytes != nil {
+			bodyReader = bytes.NewReader(bodyBytes)
+		}
 
 		// create http request object with method type and request URL
-		httpReq, err := http.NewRequestWithContext(ctx, method, requestURL, jsonBody)
+		httpReq, err := http.NewRequestWithContext(ctx, method, requestURL, bodyReader)
 		if err != nil {
 			return nil, err
 		}
