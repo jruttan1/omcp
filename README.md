@@ -7,6 +7,7 @@ Point omcp at an OpenAPI spec and get a fully working MCP server. One binary, no
 ```
 brew tap jruttan1/omcp
 brew install omcp
+omcp init
 ```
 
 ## Usage
@@ -47,3 +48,7 @@ Your API key is stored locally in `~/.omcp/config.json` with owner-only permissi
 - Bearer token / API key auth
 - Path params, query params, and request bodies
 - Any MCP-compatible client: Claude Desktop, Cursor, Cline, Zed, and more
+
+## Contributing
+
+Issues and PRs welcome. 
