@@ -1,0 +1,60 @@
+{
+  "spec": "path/to/openapi.yaml",
+  "baseURL": "https://api.example.com",
+  "apiKey": "your-api-key",
+  "info": {
+    "title": "Example API",
+    "version": "1.0.0",
+    "description": "An example API"
+  },
+  "tools": [
+    {
+      "Name": "get_users",
+      "Method": "GET",
+      "Route": "/users",
+      "Summary": "List all users",
+      "Parameters": [
+        {
+          "Name": "limit",
+          "In": "query",
+          "Required": false,
+          "Type": "integer"
+        }
+      ]
+    },
+    {
+      "Name": "get_users_id",
+      "Method": "GET",
+      "Route": "/users/{id}",
+      "Summary": "Get a user by ID",
+      "Parameters": [
+        {
+          "Name": "id",
+          "In": "path",
+          "Required": true,
+          "Type": "string"
+        }
+      ]
+    },
+    {
+      "Name": "post_users",
+      "Method": "POST",
+      "Route": "/users",
+      "Summary": "Create a new user",
+      "Parameters": [
+        {
+          "Name": "name",
+          "In": "body",
+          "Required": true,
+          "Type": "string"
+        },
+        {
+          "Name": "email",
+          "In": "body",
+          "Required": true,
+          "Type": "string"
+        }
+      ]
+    }
+  ]
+}

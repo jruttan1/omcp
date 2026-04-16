@@ -37,6 +37,10 @@ Then pick which endpoints to expose as tools. Your config is saved to `~/.omcp/c
 
 When your client starts, it spawns `omcp` which reads the saved config and registers your selected endpoints as tools — ready to call.
 
+## Security
+
+Your API key is stored locally in `~/.omcp/config.json` with owner-only permissions. omcp runs entirely on your machine, no telemetry, no external calls, nothing leaves your device except the API requests you choose to make.
+
 ## What it supports
 
 - Local servers (`http://localhost:8080`) or live APIs (`https://api.stripe.com`)
