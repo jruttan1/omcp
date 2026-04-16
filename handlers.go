@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,6 +35,20 @@ func buildURL(tool Tool, args map[string]any, baseURL string) string {
 	return requestURL
 }
 
+func buildBody(tool Tool, args map[string]any) ([]byte, error) {
+	body := map[string]any{}
+	for _, p := range tool.Parameters {
+		if p.In == "body" {
+			arg := args[p.Name]
+			body[p.Name] = arg
+		}
+	}
+	if len(body) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(body)
+}
+
 func makeHandler(tool Tool, baseURL string) server.ToolHandlerFunc {
 	// returns a custom mcp handler for each tool
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -40,8 +56,15 @@ func makeHandler(tool Tool, baseURL string) server.ToolHandlerFunc {
 		requestURL := buildURL(tool, args, baseURL)
 		method := tool.Method
 
+		bodyBytes, err := buildBody(tool, args)
+		if err != nil {
+			return nil, err
+		}
+
+		jsonBody := bytes.NewReader(bodyBytes)
+
 		// create http request object with method type and request URL
-		httpReq, err := http.NewRequestWithContext(ctx, method, requestURL, nil)
+		httpReq, err := http.NewRequestWithContext(ctx, method, requestURL, jsonBody)
 		if err != nil {
 			return nil, err
 		}
