@@ -1,15 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"fmt"
-	"os"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "init" {
+		runInit()
+		return
+	}
+	runServer()
+}
+
+func runInit() {
 	ti := textinput.New()
 	ti.Placeholder = "path/to/openapi.yaml"
 	ti.Prompt = "> "
@@ -47,23 +56,43 @@ func main() {
 		delegate: d,
 	}
 
-	// run tui
 	p := tea.NewProgram(m)
-	result, err := p.Run() // p.Run() returns the state of the tui run
+	result, err := p.Run()
 	if err != nil {
-		fmt.Printf("Error launching CLI: %v", err)
+		fmt.Fprintf(os.Stderr, "error launching CLI: %v\n", err)
 		os.Exit(1)
 	}
-	m = result.(*model) // cast the tea.Model that Run() returns to custom model pointer
+	m = result.(*model)
 
-	// start mcp
-	mcpServer := createMcp(m.input.Value(), m.serverInfo)
-	createTools(m.selectedTools, mcpServer, m.urlInput.Value(), m.keyInput.Value())
-	fmt.Fprintf(os.Stderr, "omcp: %s — %d tools registered on %s\n", m.serverInfo.Title, len(m.selectedTools), m.urlInput.Value())
+	cfg := Config{
+		Spec:    m.input.Value(),
+		BaseURL: m.urlInput.Value(),
+		APIKey:  m.keyInput.Value(),
+		Tools:   m.selectedTools,
+		Info:    m.serverInfo,
+	}
+	if err := saveConfig(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "error saving config: %v\n", err)
+		os.Exit(1)
+	}
+
+	path, _ := configPath()
+	fmt.Fprintf(os.Stderr, "✓ config saved to %s\n\nAdd this to your MCP client config:\n\n{\n  \"mcpServers\": {\n    \"%s\": {\n      \"command\": \"omcp\"\n    }\n  }\n}\n", path, cfg.Info.Title)
+}
+
+func runServer() {
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "no config found — run `omcp init` first\n")
+		os.Exit(1)
+	}
+
+	mcpServer := createMcp(cfg.Spec, cfg.Info)
+	createTools(cfg.Tools, mcpServer, cfg.BaseURL, cfg.APIKey)
+	fmt.Fprintf(os.Stderr, "omcp: %s — %d tools registered on %s\n", cfg.Info.Title, len(cfg.Tools), cfg.BaseURL)
 
 	if err := startServer(mcpServer); err != nil {
 		fmt.Fprintf(os.Stderr, "error starting server: %v\n", err)
 		os.Exit(1)
 	}
-
 }
