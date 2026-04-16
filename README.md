@@ -35,7 +35,7 @@ Then pick which endpoints to expose as tools. Your config is saved to `~/.omcp/c
 }
 ```
 
-When your client starts, it spawns `omcp` which reads the saved config and registers your selected endpoints as tools — ready to call.
+When your client starts, it spawns `omcp` which reads the saved config and registers your selected endpoints as tools, ready to call.
 
 ## Security
 
