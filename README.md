@@ -1,5 +1,7 @@
 # omcp
 
+<img width="500" height="250" alt="Screenshot 2026-04-16 at 11 48 21 PM" src="https://github.com/user-attachments/assets/c4a192ec-2931-49f8-9c9b-ca69aca60f3c" />
+
 Point omcp at an OpenAPI spec and get a fully working MCP server. One binary, no runtime, instant startup.
 
 ## Install
